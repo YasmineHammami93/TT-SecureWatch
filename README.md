@@ -25,6 +25,16 @@
 - **Base de Données**: MongoDB (Mongoose ODM)
 - **Moteur ML**: Python (Scikit-learn, Flask/FastAPI)
 - **Notification**: Nodemailer (SMTP)
+  
+ ## 🔑 Comptes de Test (Demo)
+Pour tester la plateforme, vous pouvez utiliser les comptes créés par défaut lors de l'initialisation de la base de données :
+| Rôle | Nom d'utilisateur | Mot de passe |
+| :--- | :--- | :--- |
+| **Administrateur** | `yasmine` | `admin123` |
+| **Analyste SOC** | `ahmed` | `admin123` |
+> [!NOTE]
+> Pour initialiser ces comptes, exécutez `node backend/scripts/init-db.js` après avoir configuré MongoDB.
+---
 ---
 ## 🏗️ Architecture
 La plateforme suit une **Architecture Modulaire Monolithique** divisée en cinq couches distinctes :
