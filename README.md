@@ -36,18 +36,6 @@ Pour tester la plateforme, vous pouvez utiliser les comptes créés par défaut 
 > Pour initialiser ces comptes, exécutez `node backend/scripts/init-db.js` après avoir configuré MongoDB.
 ---
 ---
-## 🏗️ Architecture
-La plateforme suit une **Architecture Modulaire Monolithique** divisée en cinq couches distinctes :
-```mermaid
-graph TD
-    A[Couche Présentation - React] --> B[Serveur API - Node/Express]
-    B --> C[Couche Service - Logique & Email]
-    B --> D[Couche Intelligence - Python ML]
-    C --> E[Accès aux Données - Mongoose]
-    D --> E
-    E --> F[(MongoDB)]
-```
----
 ## 🚦 Installation et Démarrage
 ### Prérequis
 - Node.js (v20+)
