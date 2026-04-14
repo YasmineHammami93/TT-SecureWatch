@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const actionSchema = new mongoose.Schema({
     alertId: {
         type: String,
-        required: true,
+        required: false,
         index: true
     },
     userId: {
@@ -12,8 +12,7 @@ const actionSchema = new mongoose.Schema({
     },
     action: {
         type: String,
-        required: true,
-        enum: ['CREATE', 'UPDATE', 'DELETE', 'ASSIGN', 'ANALYZE', 'COMMENT', 'PLAYBOOK_EXECUTE']
+        required: true
     },
     details: {
         type: String,

@@ -5,37 +5,28 @@ const { sendAlertEmail } = require('./emailService');
 
 // Mapping des alertes vers les features ML
 const mapAlertToFeatures = (alert) => {
+    // Si on a déjà des données techniques réelles (depuis le dataset), on les utilise
+    if (alert.technicalData) {
+        return alert.technicalData;
+    }
+
+    // Sinon, on garde la simulation pour les alertes manuelles/legacy
     const desc = alert.description ? alert.description.toLowerCase() : '';
     const proto = (desc.includes('udp') || desc.includes('dns')) ? 'udp' : 'tcp';
     const service = (desc.includes('dns')) ? 'dns' : ((desc.includes('http') || desc.includes('web')) ? 'http' : 'other');
 
-    // Variabilité des stats réseau selon le type d'attaque
-    let src_pkts = Math.floor(Math.random() * 50) + 1;
-    let dst_pkts = Math.floor(Math.random() * 50) + 1;
-
-    if (desc.includes('ddos') || desc.includes('flood')) {
-        src_pkts = Math.floor(Math.random() * 5000) + 1000;
-        dst_pkts = Math.floor(Math.random() * 50);
-    } else if (desc.includes('scan')) {
-        src_pkts = Math.floor(Math.random() * 200) + 50;
-        dst_pkts = Math.floor(Math.random() * 10);
-    } else if (desc.includes('brute') || desc.includes('ssh')) {
-        src_pkts = Math.floor(Math.random() * 100) + 20;
-        dst_pkts = Math.floor(Math.random() * 100) + 20;
-    } else if (desc.includes('http') || desc.includes('web')) {
-        src_pkts = Math.floor(Math.random() * 50) + 50;
-        dst_pkts = Math.floor(Math.random() * 500) + 500;
-    }
-
     return {
-        duration: Math.random() * 10,
         proto: proto,
         service: service,
-        conn_state: 'SF',
-        src_pkts: src_pkts,
-        dst_pkts: dst_pkts,
-        src_bytes: Math.floor(Math.random() * 2000) + 100,
-        dst_bytes: Math.floor(Math.random() * 2000) + 100
+        state: 'SF',
+        dur: Math.random() * 2,
+        spkts: Math.floor(Math.random() * 100),
+        dpkts: Math.floor(Math.random() * 100),
+        sbytes: Math.floor(Math.random() * 1000),
+        dbytes: Math.floor(Math.random() * 1000),
+        rate: Math.random() * 100,
+        sload: Math.random() * 1000,
+        dload: Math.random() * 1000
     };
 };
 
@@ -67,6 +58,8 @@ const processAlertWithML = async (alert, user = null) => {
 
         const isAutomated = mlResult.risk_level === 'Critique';
         const predictedClassStr = mlResult.prediction === 1 ? 'Attaque' : 'Normal';
+        
+        const newStatus = alert.status;
 
         // Mapping du niveau de risque vers la sévérité
         let newSeverity = alert.severity;
@@ -80,6 +73,7 @@ const processAlertWithML = async (alert, user = null) => {
             { id: alert.id },
             {
                 severity: newSeverity,
+                status: newStatus,
                 mlData: {
                     predictedClass: predictedClassStr,
                     confidenceScore: mlResult.confidence,
@@ -90,37 +84,67 @@ const processAlertWithML = async (alert, user = null) => {
             }
         );
 
-        // Notification automatique si risque critique ou élevé
-        if (mlResult.risk_level === 'Critique' || mlResult.risk_level === 'Haute') {
-            let recipient = 'yasminehammami97@gmail.com';
-
-            if (user) {
-                const userData = await User.findById(user.id);
-                recipient = userData?.settings?.contactEmail || userData?.email || recipient;
-            } else {
-                const admin = await User.findOne({ role: 'ADMIN' });
-                recipient = admin?.settings?.contactEmail || admin?.email || recipient;
-            }
-
-            await sendAlertEmail(recipient, {
-                ...alert,
-                predictedClass: predictedClassStr,
-                riskScore: Math.round(mlResult.confidence * 100),
-                recommendation: isAutomated ? "BLOCAGE AUTOMATIQUE" : "INVESTIGATION PRIORITAIRE"
-            });
-
-            console.log(`[ML Service] Notification envoyée pour ${alert.id} (${mlResult.risk_level})`);
+        // Notification automatique supprimée (Passage en mode manuel via l'interface utilisateur ou le bouton 'Notifier SOC')
+        if (mlResult.risk_level === 'Critique') {
+            console.log(`[ML Service] Alerte CRITIQUE ${alert.id} détectée (Analyse terminée, aucune notification automatique envoyée)`);
         }
 
+        // Dynamic text generation based on Prediction and Alert Context
+        const isFalsePositive = mlResult.prediction === 0;
+        const descLower = (alert.description || '').toLowerCase();
+        
+        // Valeurs par défaut pour une attaque générique
+        let attackTypeStr = "anomalie système ou réseau";
+        let rootCause = "Activité malveillante générique confirmée par Random Forest";
+        let remediationSteps = isAutomated 
+            ? ["Blocage IP automatique", "Notification Admin", "Isolation du Segment"] 
+            : ["Analyser les logs systèmes", "Isoler l'hôte affecté", "Rechercher des mouvements latéraux"];
+
+        // Spécialisation selon le contexte de l'alerte
+        if (!isFalsePositive) {
+            if (descLower.includes('ddos') || descLower.includes('dos') || descLower.includes('volume')) {
+                attackTypeStr = "attaque de Déni de Service (DoS/DDoS)";
+                rootCause = "Trafic anormalement élevé visant à saturer la cible (Score ML affirmé)";
+                remediationSteps = isAutomated ? ["Blocage IP automatique", "Filtrage au niveau du Firewall/WAF"] : ["Activer la protection anti-DDoS", "Limiter le taux de requêtes (Rate Limiting)"];
+            } else if (descLower.includes('ransomware') || descLower.includes('chiffrement') || descLower.includes('malware') || descLower.includes('cobaltstrike')) {
+                attackTypeStr = "infection par Malware/Ransomware";
+                rootCause = "Comportement de chiffrement ou présence de charge utile malveillante détectée";
+                remediationSteps = ["Déconnexion immédiate du réseau (Isolation)", "Analyse forensique du disque", "Restauration depuis un backup sain"];
+            } else if (descLower.includes('connexion') || descLower.includes('identifiants') || descLower.includes('scan') || descLower.includes('mouvement')) {
+                attackTypeStr = "tentative de compromission ou de mouvement latéral";
+                rootCause = "Tentatives d'accès non autorisées ou exploration du réseau interne";
+                remediationSteps = isAutomated ? ["Blocage automatique de l'IP source", "Verrouillage du compte"] : ["Réinitialiser les mots de passe", "Bloquer les IPs suspectes sur le pare-feu"];
+            } else if (descLower.includes('powershell') || descLower.includes('injection') || descLower.includes('commande') || descLower.includes('shell') || descLower.includes('rootkit')) {
+                attackTypeStr = "exécution de code arbitraire / compromission système";
+                rootCause = "Utilisation suspecte d'outils d'administration ou exécution de scripts encodés furtifs";
+                remediationSteps = ["Isoler l'hôte affecté", "Tuer les processus suspects identifiés", "Analyser la chaîne d'exécution (EDR)"];
+            } else if (descLower.includes('exfiltration') || descLower.includes('tunnel') || descLower.includes('sortie')) {
+                attackTypeStr = "exfiltration de données / transfert Cloud";
+                rootCause = "Connexion sortante massive ou utilisation de tunnel masqué indiquant une fuite de données";
+                remediationSteps = ["Bloquer les ports ou protocoles non-standards", "Interdire temporairement le flux vers la destination", "Vérifier l'intégrité des données touchées"];
+            }
+        }
+
+        let summary = `Classification ML: ${predictedClassStr}. Le modèle a analysé l'évènement et l'identifie comme ${isFalsePositive ? 'un trafic normal et légitime' : 'une ' + attackTypeStr + ' malveillante'}.`;
+
+        if (isFalsePositive) {
+            rootCause = "Comportement réseau bénin confondu avec une menace par la règle SIEM (False Positive)";
+            remediationSteps = ["Ignorer l'alerte (Validé par Modèle ML)", "Ajuster la sensibilité de la règle de détection SIEM"];
+        }
+
+        let recommendedAction = isFalsePositive
+            ? "Clôturer et archiver l'alerte"
+            : (isAutomated ? "Blocage automatique conseillé/appliqué" : "Investigation approfondie requise pour confinement");
+
         return {
-            summary: `Classification ML: ${predictedClassStr}`,
+            summary,
             riskScore: mlResult.risk_score,
             confidence: mlResult.confidence,
             riskLevel: mlResult.risk_level,
-            recommendedAction: isAutomated ? "Actions de remédiation immédiates recommandées (Blocage)" : "Investigation manuelle requise",
-            isAutomated: isAutomated,
-            rootCause: "Déduite par Random Forest (API Python)",
-            remediationSteps: isAutomated ? ["Blocage IP automatique", "Notification Admin"] : ["Vérifier les logs", "Isoler l'hôte"]
+            recommendedAction,
+            isAutomated,
+            rootCause,
+            remediationSteps
         };
     } catch (error) {
         console.error('[ML Service] Erreur traitement:', error);

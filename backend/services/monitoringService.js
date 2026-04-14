@@ -15,27 +15,18 @@ const startBackgroundMonitoring = () => {
 
     monitoringInterval = setInterval(async () => {
         try {
-            console.log('[Monitoring] Synchronisation automatique en cours...');
-
-            // Récupération des nouvelles alertes depuis les collecteurs
+            // Récupération des nouvelles alertes depuis les collecteurs (Analyse IA déjà incluse dans syncAll)
             const newAlerts = await SIEMCollectors.syncAll();
 
-            if (newAlerts.length > 0) {
-                console.log(`[Monitoring] ${newAlerts.length} nouvelles alertes détectées. Analyse IA en cours...`);
-
-                // Analyse automatique de chaque nouvelle alerte
-                for (const alert of newAlerts) {
-                    await processAlertWithML(alert.toObject());
-                }
-
-                console.log(`[Monitoring] Analyse terminée pour ${newAlerts.length} alertes`);
+            if (newAlerts && newAlerts.length > 0) {
+                console.log(`[Monitoring] ${newAlerts.length} nouvelles alertes réelles détectées et analysées par l'IA.`);
             } else {
-                console.log('[Monitoring] Aucune nouvelle alerte');
+                console.log('[Monitoring] Aucune nouvelle activité détectée sur le réseau.');
             }
         } catch (err) {
             console.error('[Monitoring] Erreur:', err);
         }
-    }, 2 * 60 * 1000); // 2 minutes
+    }, 30 * 1000); // 30 secondes pour la démo
 };
 
 // Arrêter la surveillance

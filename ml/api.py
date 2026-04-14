@@ -12,7 +12,9 @@ try:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     model = joblib.load(os.path.join(BASE_DIR, "rf_ton_iot.pkl"))
     encoder = joblib.load(os.path.join(BASE_DIR, "label_encoder.pkl"))
-    model_columns = joblib.load(os.path.join(BASE_DIR, "model_columns.pkl"))
+    with open(os.path.join(BASE_DIR, "model_columns.json"), "r") as f:
+        import json
+        model_columns = json.load(f)
     print("✅ Model loaded successfully")
 except Exception as e:
     print(f"❌ Error loading model: {e}")
@@ -54,13 +56,29 @@ def predict():
     try:
         data = request.get_json()
         
+        # Map ToN-IoT original columns to what the model expects
+        mapped_data = {
+            'duration': data.get('dur', data.get('duration', 0.0)),
+            'src_pkts': data.get('spkts', data.get('src_pkts', 0)),
+            'dst_pkts': data.get('dpkts', data.get('dst_pkts', 0)),
+            'src_bytes': data.get('sbytes', data.get('src_bytes', 0)),
+            'dst_bytes': data.get('dbytes', data.get('dst_bytes', 0)),
+        }
+
+        # Handle categorical features (one-hot encode manually since we know the columns)
+        proto = data.get('proto', 'tcp').lower()
+        mapped_data[f'proto_{proto}'] = 1
+
+        service = data.get('service', '-').lower()
+        mapped_data[f'service_{service}'] = 1
+
+        conn_state = data.get('state', data.get('conn_state', 'SF')).upper()
+        mapped_data[f'conn_state_{conn_state}'] = 1
+        
         # Convert to DataFrame
-        df = pd.DataFrame([data])
+        df = pd.DataFrame([mapped_data])
         
-        # One-hot encode
-        df = pd.get_dummies(df)
-        
-        # Align columns
+        # Align columns with exact expected model columns
         df = df.reindex(columns=model_columns, fill_value=0)
         
         # Predict class and probability

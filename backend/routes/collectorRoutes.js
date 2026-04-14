@@ -2,11 +2,104 @@ const express = require('express');
 const router = express.Router();
 const SIEMCollectors = require('../collectors/siem_collectors');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
+const Action = require('../models/Action');
+const Collector = require('../models/Collector');
 
 /**
- * Routes de collecte SIEM
- * Base URL: /api/collectors
+ * GET /api/collectors
+ * Récupérer tous les collecteurs (ADMIN)
  */
+router.get('/', authenticateToken, async (req, res) => {
+    try {
+        const collectors = await Collector.find().sort({ createdAt: -1 });
+
+        // Seed initial data if empty
+        if (collectors.length === 0) {
+            const initial = [
+                { name: 'Wazuh HIDS', url: 'https://wazuh.local:55000', status: 'Actif', lastSync: new Date() },
+                { name: 'IBM QRadar', url: 'https://qradar.local/api', status: 'Actif', lastSync: new Date() },
+                { name: 'MS Defender', url: 'https://api.securitycenter.microsoft.com', status: 'Inactif', lastSync: new Date() }
+            ];
+            await Collector.insertMany(initial);
+            return res.json({ success: true, data: initial });
+        }
+
+        res.json({ success: true, data: collectors });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Erreur serveur' });
+    }
+});
+
+/**
+ * POST /api/collectors
+ * Ajouter un collecteur
+ */
+router.post('/', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { name, url, status } = req.body;
+        const collector = new Collector({ name, url, status });
+        await collector.save();
+        
+        await Action.create({
+            userId: req.user.id,
+            action: 'COLLECTOR_CREATE',
+            details: `Source SIEM ajoutée: ${name}`
+        });
+
+        res.status(201).json({ success: true, data: collector });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Erreur création collecteur' });
+    }
+});
+
+/**
+ * PUT /api/collectors/:id
+ * Modifier un collecteur
+ */
+router.put('/:id', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { name, url, status } = req.body;
+        const collector = await Collector.findByIdAndUpdate(
+            req.params.id, 
+            { name, url, status }, 
+            { new: true }
+        );
+
+        if (collector) {
+            await Action.create({
+                userId: req.user.id,
+                action: 'COLLECTOR_UPDATE',
+                details: `Source SIEM modifiée: ${name}`
+            });
+        }
+
+        res.json({ success: true, data: collector });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Erreur mise à jour collecteur' });
+    }
+});
+
+/**
+ * DELETE /api/collectors/:id
+ * Supprimer un collecteur
+ */
+router.delete('/:id', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const collector = await Collector.findByIdAndDelete(req.params.id);
+        
+        if (collector) {
+            await Action.create({
+                userId: req.user.id,
+                action: 'COLLECTOR_DELETE',
+                details: `Source SIEM supprimée: ${collector.name}`
+            });
+        }
+
+        res.json({ success: true, message: 'Collecteur supprimé' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Erreur suppression collecteur' });
+    }
+});
 
 /**
  * POST /api/collectors/sync
@@ -15,129 +108,44 @@ const { authenticateToken, isAdmin } = require('../middleware/auth');
 router.post('/sync', authenticateToken, isAdmin, async (req, res) => {
     try {
         console.log(`[Collectors] 🔄 Synchronisation manuelle demandée par ${req.user.username}`);
-
         const newAlerts = await SIEMCollectors.syncAll();
-
-        res.json({
-            success: true,
-            message: `Synchronisation terminée`,
-            data: {
-                newAlerts: newAlerts.length,
-                alerts: newAlerts
-            }
+        
+        await Action.create({
+            userId: req.user.id,
+            action: 'COLLECTOR_SYNC',
+            details: `Synchronisation manuelle SIEM lancée`
         });
 
+        res.json({ success: true, message: `Synchronisation terminée`, data: { newAlerts: newAlerts.length } });
     } catch (error) {
-        console.error('[Collectors] ❌ Erreur synchronisation:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur lors de la synchronisation'
-        });
-    }
-});
-
-/**
- * POST /api/collectors/sync/:source
- * Synchroniser une source SIEM spécifique
- */
-router.post('/sync/:source', authenticateToken, isAdmin, async (req, res) => {
-    try {
-        const { source } = req.params;
-
-        const validSources = ['wazuh', 'qradar', 'defender'];
-        if (!validSources.includes(source.toLowerCase())) {
-            return res.status(400).json({
-                success: false,
-                error: `Source invalide. Utilisez: ${validSources.join(', ')}`
-            });
-        }
-
-        console.log(`[Collectors] 🔄 Synchronisation ${source} demandée par ${req.user.username}`);
-
-        let newAlerts = [];
-
-        switch (source.toLowerCase()) {
-            case 'wazuh':
-                newAlerts = await SIEMCollectors.syncWazuh();
-                break;
-            case 'qradar':
-                newAlerts = await SIEMCollectors.syncQRadar();
-                break;
-            case 'defender':
-                newAlerts = await SIEMCollectors.syncDefender();
-                break;
-        }
-
-        res.json({
-            success: true,
-            message: `Synchronisation ${source} terminée`,
-            data: {
-                source: source,
-                newAlerts: newAlerts.length,
-                alerts: newAlerts
-            }
-        });
-
-    } catch (error) {
-        console.error(`[Collectors] ❌ Erreur synchronisation ${req.params.source}:`, error);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur lors de la synchronisation'
-        });
+        res.status(500).json({ success: false, error: 'Erreur lors de la synchronisation' });
     }
 });
 
 /**
  * GET /api/collectors/status
- * Obtenir le statut des collecteurs SIEM
  */
 router.get('/status', authenticateToken, async (req, res) => {
     try {
+        const collectors = await Collector.find();
         const Alert = require('../models/Alert');
 
-        // Compter les alertes par source
-        const wazuhCount = await Alert.countDocuments({ source: 'Wazuh' });
-        const qradarCount = await Alert.countDocuments({ source: 'IBM QRadar' });
-        const defenderCount = await Alert.countDocuments({ source: 'Microsoft Defender' });
+        const sourcesWithStats = await Promise.all(collectors.map(async (c) => {
+            const count = await Alert.countDocuments({ source: c.name });
+            return {
+                name: c.name,
+                status: c.status === 'Actif' ? 'active' : 'inactive',
+                totalAlerts: count,
+                lastSync: c.lastSync
+            };
+        }));
 
-        // Dernière alerte collectée par source
-        const lastWazuh = await Alert.findOne({ source: 'Wazuh' }).sort({ timestamp: -1 });
-        const lastQRadar = await Alert.findOne({ source: 'IBM QRadar' }).sort({ timestamp: -1 });
-        const lastDefender = await Alert.findOne({ source: 'Microsoft Defender' }).sort({ timestamp: -1 });
-
-        res.json({
-            success: true,
-            data: {
-                sources: [
-                    {
-                        name: 'Wazuh',
-                        status: 'active',
-                        totalAlerts: wazuhCount,
-                        lastSync: lastWazuh?.timestamp || null
-                    },
-                    {
-                        name: 'IBM QRadar',
-                        status: 'active',
-                        totalAlerts: qradarCount,
-                        lastSync: lastQRadar?.timestamp || null
-                    },
-                    {
-                        name: 'Microsoft Defender',
-                        status: 'active',
-                        totalAlerts: defenderCount,
-                        lastSync: lastDefender?.timestamp || null
-                    }
-                ]
-            }
-        });
-
+        res.json({ success: true, data: { sources: sourcesWithStats } });
     } catch (error) {
-        console.error('[Collectors] ❌ Erreur statut:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur lors de la récupération du statut'
-        });
+        res.status(500).json({ success: false, error: 'Erreur statut' });
     }
 });
+
+module.exports = router;
 
 module.exports = router;

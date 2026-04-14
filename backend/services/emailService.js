@@ -102,7 +102,10 @@ const sendAlertEmail = async (to, alert) => {
 
         return true;
     } catch (error) {
-        console.error('[EMAIL] Erreur lors de l\'envoi:', error);
+        console.error('[EMAIL] ❌ Erreur lors de l\'envoi:', error.message);
+        if (error.responseCode === 429) {
+            console.warn('[EMAIL] ⚠️ Limite d\'envoi atteinte (Rate Limit). L\'email ne sera pas envoyé.');
+        }
         return false;
     }
 };

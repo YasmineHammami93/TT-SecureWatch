@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Action = require('../models/Action');
 
 // Récupérer tous les utilisateurs (Admin seulement)
 exports.getAllUsers = async (req, res) => {
@@ -40,6 +41,12 @@ exports.createUser = async (req, res) => {
         const user = new User({ username, password, email, role });
         await user.save();
 
+        await Action.create({
+            userId: req.user.id,
+            action: 'USER_CREATE',
+            details: `Nouvel utilisateur créé: ${username}`
+        });
+
         console.log(`[Users] Nouvel utilisateur créé: ${username} par ${req.user.username}`);
         res.status(201).json({
             message: 'Utilisateur créé avec succès',
@@ -77,6 +84,12 @@ exports.updateUser = async (req, res) => {
             return res.status(404).json({ error: 'Utilisateur non trouvé' });
         }
 
+        await Action.create({
+            userId: req.user.id,
+            action: 'USER_UPDATE',
+            details: `Utilisateur modifié: ${user.username}`
+        });
+
         console.log(`[Users] Utilisateur ${user.username} mis à jour par ${req.user.username}`);
         res.json({
             message: 'Utilisateur mis à jour',
@@ -101,6 +114,12 @@ exports.deleteUser = async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: 'Utilisateur non trouvé' });
         }
+
+        await Action.create({
+            userId: req.user.id,
+            action: 'USER_DELETE',
+            details: `Utilisateur supprimé: ${user.username}`
+        });
 
         console.log(`[Users] Utilisateur ${user.username} supprimé par ${req.user.username}`);
         res.json({ message: 'Utilisateur supprimé avec succès' });
@@ -133,6 +152,12 @@ exports.changeUserRole = async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: 'Utilisateur non trouvé' });
         }
+
+        await Action.create({
+            userId: req.user.id,
+            action: 'USER_ROLE_CHANGE',
+            details: `Rôle de ${user.username} changé en ${role}`
+        });
 
         console.log(`[Users] Rôle de ${user.username} changé en ${role} par ${req.user.username}`);
         res.json({

@@ -5,17 +5,19 @@ exports.getGlobalStats = async (req, res) => {
     try {
         const alerts = await Alert.find();
 
-        // 1. Calcul MTTR (Temps Moyen de Résolution)
-        const resolvedAlerts = alerts.filter(a => a.status === 'RÉSOLU');
-        let totalTime = 0;
+        // 1. Calcul MTTR (Temps Moyen de Résolution) - RÉEL
+        const resolvedAlerts = alerts.filter(a => a.status === 'RÉSOLU' && a.resolvedAt);
+        let totalMs = 0;
         resolvedAlerts.forEach(a => {
-            // Simulation du temps de résolution (en minutes)
-            totalTime += (Math.random() * 24 * 60);
+            const diff = new Date(a.resolvedAt) - new Date(a.timestamp);
+            totalMs += diff;
         });
-        const mttr = resolvedAlerts.length > 0 ? Math.round(totalTime / resolvedAlerts.length) : 45;
+        
+        // MTTR en minutes. Si pas d'alertes résolues, on met 45 par défaut (simulation initiale cohérente)
+        const mttrValue = resolvedAlerts.length > 0 ? Math.round(totalMs / (resolvedAlerts.length * 60000)) : 45;
 
-        // 2. Taux de Faux Positifs
-        const fpCount = alerts.filter(a => a.status === 'FAUX POSITIF').length;
+        // 2. Taux de Faux Positifs (identifiés par ML)
+        const fpCount = alerts.filter(a => a.mlData && a.mlData.predictedClass === 'Normal').length;
         const fpRate = alerts.length > 0 ? ((fpCount / alerts.length) * 100).toFixed(1) : 0;
 
         // 3. Distribution par Status
@@ -23,17 +25,21 @@ exports.getGlobalStats = async (req, res) => {
             NOUVEAU: alerts.filter(a => a.status === 'NOUVEAU').length,
             'EN COURS': alerts.filter(a => a.status === 'EN COURS').length,
             RÉSOLU: alerts.filter(a => a.status === 'RÉSOLU').length,
-            'FAUX POSITIF': alerts.filter(a => a.status === 'FAUX POSITIF').length,
         };
 
-        // 4. Distribution par Sévérité
-        const severityCounts = {
-            CRITIQUE: alerts.filter(a => a.severity === 'CRITIQUE').length,
-            HAUTE: alerts.filter(a => a.severity === 'HAUTE').length,
-            MOYENNE: alerts.filter(a => a.severity === 'MOYENNE').length,
-            FAIBLE: alerts.filter(a => a.severity === 'FAIBLE').length,
-            INFO: alerts.filter(a => a.severity === 'INFO').length,
-        };
+        // 4. Distribution par Sévérité ET Score Moyen
+        const severities = ['CRITIQUE', 'HAUTE', 'MOYENNE', 'FAIBLE', 'INFO'];
+        const severityCounts = {};
+        const avgScores = {};
+
+        severities.forEach(sev => {
+            const list = alerts.filter(a => a.severity === sev);
+            severityCounts[sev] = list.length;
+            
+            // Calcul du score moyen pour cette catégorie
+            const totalScore = list.reduce((acc, curr) => acc + (curr.mlData?.riskScore || 0), 0);
+            avgScores[sev] = list.length > 0 ? Math.round(totalScore / list.length) : 0;
+        });
 
         // 5. Distribution par Source
         const sourceCounts = {};
@@ -42,11 +48,12 @@ exports.getGlobalStats = async (req, res) => {
         });
 
         res.json({
-            mttr: `${mttr} min`,
+            mttr: `${mttrValue} min`,
             fpRate: `${fpRate}%`,
             totalAlerts: alerts.length,
             statusCounts,
             severityCounts,
+            avgScores, // Nouvelle donnée pour le Dashboard
             sourceCounts
         });
     } catch (err) {
@@ -124,3 +131,34 @@ exports.getDetailedStats = async (req, res) => {
         res.status(500).json({ error: 'Erreur lors du calcul des statistiques détaillées' });
     }
 };
+
+// Statistiques du dataset d'entraînement
+exports.getMLDatasetStats = async (req, res) => {
+    try {
+        const distribution = {
+            "normal": 50000,
+            "backdoor": 20000,
+            "ddos": 20000,
+            "dos": 20000,
+            "injection": 20000,
+            "password": 20000,
+            "ransomware": 20000,
+            "scanning": 20000,
+            "xss": 20000,
+            "mitm": 1043
+        };
+
+        res.json({
+            accuracy: 99.67,
+            recall: 98.59,
+            precision: 99.98,
+            f1Score: 99.28,
+            totalSamples: 211043,
+            distribution
+        });
+    } catch (err) {
+        console.error('[Stats] Erreur statistiques dataset:', err);
+        res.status(500).json({ error: 'Erreur lors du calcul des statistiques du dataset' });
+    }
+};
+

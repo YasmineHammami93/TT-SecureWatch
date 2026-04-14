@@ -7,7 +7,7 @@ const AlertSchema = new mongoose.Schema({
     sourceIp: { type: String },
     destinationIp: { type: String },
     severity: { type: String, enum: ['CRITIQUE', 'HAUTE', 'MOYENNE', 'FAIBLE', 'INFO'] },
-    status: { type: String, enum: ['NOUVEAU', 'EN COURS', 'RÉSOLU', 'FAUX POSITIF'], default: 'NOUVEAU' },
+    status: { type: String, enum: ['NOUVEAU', 'EN COURS', 'RÉSOLU'], default: 'NOUVEAU' },
     description: { type: String },
     affectedSystem: { type: String },
     rawLog: { type: String },
@@ -17,7 +17,9 @@ const AlertSchema = new mongoose.Schema({
         riskScore: { type: Number },
         riskLevel: { type: String },
         isAutomated: { type: Boolean, default: false }
-    }
+    },
+    technicalData: { type: mongoose.Schema.Types.Mixed }, // Données ToN-IoT réelles
+    resolvedAt: { type: Date } // Pour calcul MTTR
 });
 
 module.exports = mongoose.model('Alert', AlertSchema);

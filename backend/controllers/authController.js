@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const Action = require('../models/Action');
 
 /**
  * ===============================
@@ -42,6 +43,12 @@ exports.register = async (req, res) => {
     });
 
     await newUser.save();
+
+    await Action.create({
+      userId: newUser._id,
+      action: 'USER_REGISTER',
+      details: `Création de compte: ${username}`,
+    });
 
     const token = jwt.sign(
       { id: newUser._id, username: newUser.username, role: newUser.role },
@@ -92,6 +99,12 @@ exports.login = async (req, res) => {
 
     await User.updateOne({ _id: user._id }, { $set: { lastLogin: new Date() } });
 
+    await Action.create({
+      userId: user._id,
+      action: 'USER_LOGIN',
+      details: `Connexion réussie: ${username}`,
+    });
+
     const token = jwt.sign(
       { id: user._id, username: user.username, role: user.role },
       process.env.JWT_SECRET || "secret_key_123",
@@ -137,6 +150,13 @@ exports.getMe = async (req, res) => {
  */
 exports.logout = async (req, res) => {
   try {
+    if (req.user) {
+      await Action.create({
+        userId: req.user.id,
+        action: 'USER_LOGOUT',
+        details: `Déconnexion: ${req.user.username}`,
+      });
+    }
     res.json({ success: true, message: "Déconnexion réussie" });
   } catch (error) {
     console.error("❌ Erreur logout:", error);

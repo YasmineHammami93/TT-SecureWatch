@@ -5,31 +5,42 @@ const Action = require('../models/Action');
 // Récupérer toutes les alertes avec filtres
 exports.getAllAlerts = async (req, res) => {
     try {
-        const { source, severity, status, search, dateFrom, dateTo, limit = 100 } = req.query;
+        const { source, severity, status, search, limit = 100 } = req.query;
 
         let query = {};
 
-        // Filtres
+        // 1. Gestion du filtrage par Sévérité (avec cas spécial Faux Positifs)
+        if (severity) {
+            let mappedSev = severity.toUpperCase();
+            if (mappedSev === 'FAUX POSITIF') {
+                query['mlData.predictedClass'] = 'Normal';
+            } else {
+                if (mappedSev === 'ÉLEVÉE' || mappedSev === 'ELEVEE') mappedSev = 'HAUTE';
+                query.severity = mappedSev;
+                // Exclure les faux positifs des listes normales si on cherche une sévérité précise
+                query['mlData.predictedClass'] = { $ne: 'Normal' };
+            }
+        }
+
+        // 2. Autres filtres simples
         if (source) query.source = source;
-        if (severity) query.severity = severity;
-        if (status) query.status = status;
+        if (status) query.status = status.toUpperCase();
+        
+        // 3. Recherche textuelle globale
         if (search) {
             query.$or = [
                 { description: { $regex: search, $options: 'i' } },
                 { id: { $regex: search, $options: 'i' } },
-                { sourceIp: { $regex: search, $options: 'i' } }
+                { sourceIp: { $regex: search, $options: 'i' } },
+                { source: { $regex: search, $options: 'i' } },
+                { title: { $regex: search, $options: 'i' } }
             ];
-        }
-        if (dateFrom || dateTo) {
-            query.timestamp = {};
-            if (dateFrom) query.timestamp.$gte = new Date(dateFrom);
-            if (dateTo) query.timestamp.$lte = new Date(dateTo);
         }
 
         const alerts = await Alert.find(query)
             .sort({ timestamp: -1 })
-            .limit(parseInt(limit));
-
+            .limit(parseInt(limit.toString()));
+            
         res.json(alerts);
     } catch (err) {
         console.error('[Alerts] Erreur récupération:', err);
@@ -49,10 +60,18 @@ exports.getAssignedAlerts = async (req, res) => {
     }
 };
 
-// Récupérer une alerte par ID
+// Récupérer une alerte par ID (Supporte ID personnalisé et ObjectId)
 exports.getAlertById = async (req, res) => {
     try {
-        const alert = await Alert.findOne({ id: req.params.id });
+        const id = req.params.id;
+        // Chercher d'abord par champ 'id' (format SIEM comme WZH-XXX)
+        let alert = await Alert.findOne({ id: id });
+        
+        // Si pas trouvé et que c'est un format ObjectId valide, chercher par _id
+        if (!alert && id.match(/^[0-9a-fA-F]{24}$/)) {
+            alert = await Alert.findById(id);
+        }
+
         if (!alert) {
             return res.status(404).json({ error: 'Alerte non trouvée' });
         }
@@ -69,13 +88,19 @@ exports.updateAlert = async (req, res) => {
         const { status, severity, assignedTo, notes } = req.body;
 
         const updateData = {};
-        if (status) updateData.status = status;
+        if (status) {
+            updateData.status = status;
+            if (status === 'RÉSOLU') {
+                updateData.resolvedAt = new Date();
+            }
+        }
         if (severity) updateData.severity = severity;
         if (assignedTo) updateData.assignedTo = assignedTo;
         if (notes) updateData.notes = notes;
 
+        const id = req.params.id;
         const alert = await Alert.findOneAndUpdate(
-            { id: req.params.id },
+            { $or: [{ id: id }, { _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }] },
             updateData,
             { new: true }
         );
@@ -179,6 +204,15 @@ exports.addComment = async (req, res) => {
         });
 
         await alert.save();
+
+        // Enregistrer l'action
+        await Action.create({
+            alertId: alert.id,
+            userId: req.user.id,
+            action: 'COMMENT',
+            details: `Commentaire ajouté`,
+            timestamp: new Date()
+        });
 
         console.log(`[Alerts] Commentaire ajouté à ${req.params.id} par ${req.user.username}`);
         res.json(alert);

@@ -24,7 +24,10 @@ const userRoutes = require('./routes/userRoutes');
 const collectorRoutes = require('./routes/collectorRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 const playbookRoutes = require('./routes/playbookRoutes');
+const reportRoutes = require('./routes/reportRoutes');
+const assetRoutes = require('./routes/assetRoutes');
 const miscRoutes = require('./routes/miscRoutes');
+const aiRoutes = require('./routes/aiRoutes');
 
 // ================= MIDDLEWARE =================
 app.use(cors());
@@ -71,6 +74,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/collectors', collectorRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/playbooks', playbookRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/assets', assetRoutes);
+app.use('/api/ai', aiRoutes);
 app.use('/api', miscRoutes);
 
 // ================= HEALTH CHECK =================
