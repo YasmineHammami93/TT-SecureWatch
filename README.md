@@ -1,5 +1,3 @@
-# cyber-alert-platform
- 
 # 🛡️ TT SecureWatch - Plateforme d'Alerte Cyber
 [![React](https://img.shields.io/badge/Frontend-React%2019-blue?logo=react)](https://reactjs.org/)
 [![Node.js](https://img.shields.io/badge/Backend-Node.js%2020-green?logo=nodedotjs)](https://nodejs.org/)
