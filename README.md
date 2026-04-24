@@ -1,14 +1,10 @@
 # 🛡️ TT SecureWatch - Plateforme d'Alerte Cyber
-<<<<<<< HEAD
 
-=======
->>>>>>> 1c6f45a91594384fca9347c1297f0088c4d08fd3
 [![React](https://img.shields.io/badge/Frontend-React%2019-blue?logo=react)](https://reactjs.org/)
 [![Node.js](https://img.shields.io/badge/Backend-Node.js%2020-green?logo=nodedotjs)](https://nodejs.org/)
 [![Python](https://img.shields.io/badge/ML%20Engine-Python%203.12-yellow?logo=python)](https://www.python.org/)
 [![MongoDB](https://img.shields.io/badge/Database-MongoDB%207-brightgreen?logo=mongodb)](https://www.mongodb.com/)
 [![Tailwind CSS](https://img.shields.io/badge/Styling-Tailwind%20CSS-38B2AC?logo=tailwindcss)](https://tailwindcss.com/)
-<<<<<<< HEAD
 
 **TT SecureWatch** est une plateforme intelligente de gestion et d'orchestration SIEM conçue pour lutter contre la "fatigue des alertes" dans les centres d'opérations de sécurité (SOC) modernes. Développé dans le cadre d'un projet de fin d'études (PFE) chez **Tunisie Telecom (DSSI)**, ce système utilise l'Intelligence Artificielle (Random Forest) pour classifier, prioriser et automatiser la réponse aux menaces cyber.
 
