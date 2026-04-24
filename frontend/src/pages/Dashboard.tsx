@@ -26,7 +26,7 @@ const Dashboard: React.FC = () => {
   const [severityData, setSeverityData] = useState<number[]>([0, 0, 0, 0]);
     const [sourceData, setSourceData] = useState<{ labels: string[], data: number[] }>({ labels: [], data: [] });
     const [avgScores, setAvgScores] = useState<Record<string, number>>({});
-    const [mlStats, setMlStats] = useState<{ accuracy: number, recall: number, precision: number, f1Score: number }>({ accuracy: 99.7, recall: 98.6, precision: 99.9, f1Score: 99.3 });
+    const [mlStats, setMlStats] = useState<{ accuracy: number, recall: number, precision: number, f1Score: number }>({ accuracy: 99.2, recall: 99.3, precision: 99.2, f1Score: 99.2 });
   
     useEffect(() => {
       loadStats();
@@ -40,7 +40,12 @@ const Dashboard: React.FC = () => {
     const loadStats = async () => {
       try {
         setLoading(true);
-        const data = await statsService.getGlobal();
+        const [data, detailedData, mld] = await Promise.all([
+          statsService.getGlobal(),
+          statsService.getDetailed('7d'),
+          statsService.getMLDatasetStats()
+        ]);
+
         if (data) {
           setStats({
             totalAlerts: data.totalAlerts || 0,
@@ -66,34 +71,32 @@ const Dashboard: React.FC = () => {
           });
         }
 
-      const detailedData = await statsService.getDetailed('7d');
-      if (detailedData && detailedData.alertsByDay) {
-        const sortedLabels = Object.keys(detailedData.alertsByDay).sort();
-        const alertsData = sortedLabels.map(l => detailedData.alertsByDay[l]);
-
-        const formattedLabels = sortedLabels.map(d => {
-          const date = new Date(d);
-          return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-        });
-
-        setTrendData({ labels: formattedLabels, data: alertsData });
+        if (detailedData && detailedData.alertsByDay) {
+          const sortedLabels = Object.keys(detailedData.alertsByDay).sort();
+          const alertsData = sortedLabels.map(l => detailedData.alertsByDay[l]);
+  
+          const formattedLabels = sortedLabels.map(d => {
+            const date = new Date(d);
+            return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+          });
+  
+          setTrendData({ labels: formattedLabels, data: alertsData });
+        }
+  
+        if (mld) {
+          setMlStats({
+            accuracy: mld.accuracy,
+            recall: mld.recall,
+            precision: mld.precision,
+            f1Score: mld.f1Score
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load stats:', err);
+      } finally {
+        setLoading(false);
       }
-
-      const mld = await statsService.getMLDatasetStats();
-      if (mld) {
-        setMlStats({
-          accuracy: mld.accuracy,
-          recall: mld.recall,
-          precision: mld.precision,
-          f1Score: mld.f1Score
-        });
-      }
-    } catch (err) {
-      console.error('Failed to load stats:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
   // Real Data for "Top Sources SIEM"
   const barData = {
@@ -233,7 +236,25 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6 min-h-[600px]">
+      {loading && (
+        <div className="absolute inset-0 z-[100] flex items-center justify-center bg-white/40 dark:bg-gray-900/40 backdrop-blur-md rounded-2xl transition-all duration-500">
+          <div className="flex flex-col items-center bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 animate-in fade-in zoom-in duration-300">
+            <div className="relative">
+              <div className="h-16 w-16 rounded-full border-4 border-indigo-100 dark:border-indigo-900/30 border-t-indigo-600 animate-spin"></div>
+              <Activity className="absolute inset-0 m-auto h-6 w-6 text-indigo-600 animate-pulse" />
+            </div>
+            <h3 className="mt-6 text-xl font-bold text-gray-900 dark:text-white">Analyse des Données...</h3>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 font-medium">Récupération des métriques de sécurité en temps réel</p>
+            <div className="mt-6 flex gap-1">
+              <div className="h-1.5 w-8 rounded-full bg-indigo-600 animate-bounce [animation-delay:-0.3s]"></div>
+              <div className="h-1.5 w-8 rounded-full bg-indigo-600 animate-bounce [animation-delay:-0.15s]"></div>
+              <div className="h-1.5 w-8 rounded-full bg-indigo-600 animate-bounce"></div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Dashboard Header */}
       <div className="flex justify-between items-end">
         <div>

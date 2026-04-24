@@ -5,7 +5,7 @@ const Alert = require('../models/Alert');
 
 /**
  * Script d'initialisation de la base de données
- * Crée l'utilisateur admin par défaut et vérifie la connexion
+ * Crée les utilisateurs par défaut (Yasmine & Ahmed) et vérifie la connexion
  */
 
 const initDatabase = async () => {
@@ -25,57 +25,57 @@ const initDatabase = async () => {
 
         console.log('✅ Connexion MongoDB établie\n');
 
-        // Vérification et création de l'utilisateur Admin
-        console.log('👤 Vérification de l\'utilisateur admin...');
-        const adminExists = await User.findOne({ username: 'admin' });
+        // Vérification et création de l'utilisateur Admin (Yasmine)
+        console.log('👤 Vérification de l\'utilisateur admin (Yasmine)...');
+        const adminExists = await User.findOne({ username: 'yasmine' });
 
         if (adminExists) {
-            console.log('ℹ️  L\'utilisateur admin existe déjà');
+            console.log('ℹ️  L\'utilisateur yasmine existe déjà');
             console.log(`   - Username: ${adminExists.username}`);
             console.log(`   - Email: ${adminExists.email}`);
             console.log(`   - Role: ${adminExists.role}`);
         } else {
-            console.log('🔨 Création de l\'utilisateur admin par défaut...');
+            console.log('🔨 Création de l\'utilisateur admin par défaut (Yasmine)...');
 
             const admin = new User({
-                username: 'admin',
-                password: 'admin123', // Mot de passe par défaut (à changer en production)
-                email: process.env.ADMIN_EMAIL || 'admin@soc-tunisietelecom.tn',
+                username: 'yasmine',
+                password: 'admin123', // Mot de passe par défaut
+                email: process.env.ADMIN_EMAIL || 'yasmine@soc-tunisietelecom.tn',
                 role: 'ADMIN',
                 settings: {
                     emailNotifications: true,
-                    contactEmail: process.env.ADMIN_EMAIL || 'admin@soc-tunisietelecom.tn'
+                    contactEmail: process.env.ADMIN_EMAIL || 'yasmine@soc-tunisietelecom.tn'
                 }
             });
 
             await admin.save();
 
             console.log('✅ Utilisateur admin créé avec succès');
-            console.log('   - Username: admin');
+            console.log('   - Username: yasmine');
             console.log('   - Password: admin123');
             console.log(`   - Email: ${admin.email}`);
             console.log('\n⚠️  IMPORTANT: Changez le mot de passe après la première connexion!\n');
         }
 
-        // Création d'un utilisateur analyste de test (optionnel)
-        const analystExists = await User.findOne({ username: 'analyst' });
+        // Création de l'analyste (Ahmed)
+        const analystExists = await User.findOne({ username: 'ahmed' });
 
         if (!analystExists) {
-            console.log('🔨 Création d\'un utilisateur analyste de test...');
+            console.log('🔨 Création de l\'utilisateur analyste de test (Ahmed)...');
 
             const analyst = new User({
-                username: 'analyst',
-                password: 'analyst123',
-                email: 'analyst@soc-tunisietelecom.tn',
+                username: 'ahmed',
+                password: 'admin123',
+                email: 'ahmed@soc-tunisietelecom.tn',
                 role: 'ANALYSTE',
                 settings: {
                     emailNotifications: true,
-                    contactEmail: 'analyst@soc-tunisietelecom.tn'
+                    contactEmail: 'ahmed@soc-tunisietelecom.tn'
                 }
             });
 
             await analyst.save();
-            console.log('✅ Utilisateur analyste créé (analyst / analyst123)\n');
+            console.log('✅ Utilisateur analyste créé (ahmed / admin123)\n');
         }
 
         // Statistiques de la base

@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+.venv/
+env/
+venv/
+ENV/
+pycache/
+*.pyc
+
+# IDEs
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+
+# Build outputs
+dist/
+build/
+*.pkl
+*.json
+!model_columns.json
+
+# Local databases
+*.sqlite
+*.db
+
+# Logs
+logs/
+*.log
