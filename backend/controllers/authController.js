@@ -16,6 +16,14 @@ exports.register = async (req, res) => {
       return res.status(400).json({ success: false, error: "Tous les champs sont requis" });
     }
 
+    const emailPrefix = email.split('@')[0].toLowerCase();
+    if (emailPrefix !== username.toLowerCase().trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        error: `Le nom d'utilisateur (${username.trim()}) doit correspondre au début de l'email (ex: ${username.trim()}@...)` 
+      });
+    }
+
     if (username.trim().length < 3) {
       return res.status(400).json({ success: false, error: "Nom d'utilisateur trop court (min 3 caractères)" });
     }

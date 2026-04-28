@@ -58,6 +58,12 @@ const Users: React.FC = () => {
 
   const handleSave = async () => {
     setError('');
+
+    if (!formEmail.toLowerCase().startsWith(formUsername.toLowerCase())) {
+      setError(`L'email doit commencer par le nom d'utilisateur (ex: ${formUsername}@...)`);
+      return;
+    }
+
     try {
       if (editingUser) {
         // Update

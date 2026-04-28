@@ -156,8 +156,18 @@ const Settings: React.FC<{ initialTab?: string }> = ({ initialTab = 'profil' }) 
                 </div>
               </div>
               <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 flex gap-4">
-                <button className="px-5 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold rounded-xl shadow-md hover:shadow-lg transition-all">Mettre à jour</button>
-                <button className="px-5 py-2.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Changer de mot de passe</button>
+                <button 
+                  onClick={() => alert('Informations de profil mises à jour (Simulation)')}
+                  className="px-5 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold rounded-xl shadow-md hover:shadow-lg transition-all"
+                >
+                  Mettre à jour
+                </button>
+                <button 
+                  onClick={() => alert('Fonctionnalité de changement de mot de passe à venir')}
+                  className="px-5 py-2.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Changer de mot de passe
+                </button>
               </div>
             </div>
           </div>
@@ -206,7 +216,6 @@ const Settings: React.FC<{ initialTab?: string }> = ({ initialTab = 'profil' }) 
               {sources.map(source => (
                 <div key={source.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-md group hover:border-emerald-400 transition-colors relative overflow-hidden">
                   <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
                       <div className={`p-2.5 rounded-xl ${source.status === 'Actif' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500' : 'bg-gray-50 dark:bg-gray-800 text-gray-400'}`}>
                         <Server className="h-6 w-6" />
                       </div>
@@ -220,10 +229,9 @@ const Settings: React.FC<{ initialTab?: string }> = ({ initialTab = 'profil' }) 
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => openSourceModal(source)} className="p-1.5 text-gray-400 hover:text-[#1875c7] dark:hover:text-[#2bc0e4] bg-gray-50 dark:bg-gray-700 rounded-lg transition-colors"><Edit3 className="h-4 w-4" /></button>
-                      <button onClick={() => handleDeleteSource(source.id)} className="p-1.5 text-gray-400 hover:text-red-500 bg-gray-50 dark:bg-gray-700 rounded-lg transition-colors"><Trash2 className="h-4 w-4" /></button>
+                      <button onClick={() => handleDeleteSource(source._id || source.id)} className="p-1.5 text-gray-400 hover:text-red-500 bg-gray-50 dark:bg-gray-700 rounded-lg transition-colors"><Trash2 className="h-4 w-4" /></button>
                     </div>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3 flex flex-col gap-2">
+                    <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3 flex flex-col gap-2">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-gray-500 dark:text-gray-400 font-medium">Endpoint API:</span>
                       <span className="text-gray-900 dark:text-gray-300 font-mono bg-white dark:bg-gray-800 px-2 py-0.5 rounded border dark:border-gray-700 truncate max-w-[180px] sm:max-w-[200px]" title={source.url}>{source.url}</span>
@@ -283,7 +291,7 @@ const Settings: React.FC<{ initialTab?: string }> = ({ initialTab = 'profil' }) 
                   </div>
                   <div className="flex gap-2">
                      <button onClick={() => openPlaybookModal(playbook)} className="p-2 text-gray-400 hover:text-purple-500 bg-gray-50 dark:bg-gray-700 rounded-xl transition-colors"><Edit3 className="h-5 w-5" /></button>
-                     <button onClick={() => handleDeletePlaybook(playbook.id)} className="p-2 text-gray-400 hover:text-red-500 bg-gray-50 dark:bg-gray-700 rounded-xl transition-colors"><Trash2 className="h-5 w-5" /></button>
+                     <button onClick={() => handleDeletePlaybook(playbook._id || playbook.id)} className="p-2 text-gray-400 hover:text-red-500 bg-gray-50 dark:bg-gray-700 rounded-xl transition-colors"><Trash2 className="h-5 w-5" /></button>
                   </div>
                 </div>
               ))}

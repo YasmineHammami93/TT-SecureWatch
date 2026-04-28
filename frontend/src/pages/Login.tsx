@@ -63,6 +63,11 @@ const Login: React.FC = () => {
       return;
     }
 
+    if (!regEmail.toLowerCase().startsWith(regUsername.toLowerCase())) {
+      setError(`L'email doit commencer par le nom d'utilisateur (ex: ${regUsername}@...)`);
+      return;
+    }
+
     setLoading(true);
 
     try {

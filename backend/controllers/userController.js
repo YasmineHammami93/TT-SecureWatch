@@ -31,6 +31,13 @@ exports.getUserById = async (req, res) => {
 exports.createUser = async (req, res) => {
     try {
         const { username, password, email, role } = req.body;
+        
+        const emailPrefix = email.split('@')[0].toLowerCase();
+        if (emailPrefix !== username.toLowerCase().trim()) {
+            return res.status(400).json({ 
+                error: `Le nom d'utilisateur (${username.trim()}) doit correspondre au début de l'email (ex: ${username.trim()}@...)` 
+            });
+        }
 
         // Vérifier si l'utilisateur existe déjà
         const existingUser = await User.findOne({ $or: [{ username }, { email }] });
@@ -66,7 +73,16 @@ exports.createUser = async (req, res) => {
 // Mettre à jour un utilisateur (Admin seulement)
 exports.updateUser = async (req, res) => {
     try {
-        const { username, email, role, settings } = req.body;
+        const { username, password, email, role, settings } = req.body;
+
+        if (username && email) {
+            const emailPrefix = email.split('@')[0].toLowerCase();
+            if (emailPrefix !== username.toLowerCase().trim()) {
+                return res.status(400).json({ 
+                    error: `Le nom d'utilisateur (${username.trim()}) doit correspondre au début de l'email (ex: ${username.trim()}@...)` 
+                });
+            }
+        }
 
         const updateData = {};
         if (username) updateData.username = username;

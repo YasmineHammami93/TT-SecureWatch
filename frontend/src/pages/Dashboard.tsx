@@ -5,7 +5,7 @@ import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement
 } from 'chart.js';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
-import { Activity, TrendingUp, MousePointerClick, Clock, AlertTriangle, Brain, Timer, Filter, RefreshCw, CheckCircle } from 'lucide-react';
+import { Activity, TrendingUp, MousePointerClick, Clock, AlertTriangle, Timer, Filter, RefreshCw, CheckCircle } from 'lucide-react';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -26,7 +26,6 @@ const Dashboard: React.FC = () => {
   const [severityData, setSeverityData] = useState<number[]>([0, 0, 0, 0]);
     const [sourceData, setSourceData] = useState<{ labels: string[], data: number[] }>({ labels: [], data: [] });
     const [avgScores, setAvgScores] = useState<Record<string, number>>({});
-    const [mlStats, setMlStats] = useState<{ accuracy: number, recall: number, precision: number, f1Score: number }>({ accuracy: 99.2, recall: 99.3, precision: 99.2, f1Score: 99.2 });
   
     useEffect(() => {
       loadStats();
@@ -40,10 +39,9 @@ const Dashboard: React.FC = () => {
     const loadStats = async () => {
       try {
         setLoading(true);
-        const [data, detailedData, mld] = await Promise.all([
+        const [data, detailedData] = await Promise.all([
           statsService.getGlobal(),
-          statsService.getDetailed('7d'),
-          statsService.getMLDatasetStats()
+          statsService.getDetailed('7d')
         ]);
 
         if (data) {
@@ -83,14 +81,7 @@ const Dashboard: React.FC = () => {
           setTrendData({ labels: formattedLabels, data: alertsData });
         }
   
-        if (mld) {
-          setMlStats({
-            accuracy: mld.accuracy,
-            recall: mld.recall,
-            precision: mld.precision,
-            f1Score: mld.f1Score
-          });
-        }
+
       } catch (err) {
         console.error('Failed to load stats:', err);
       } finally {
@@ -158,20 +149,7 @@ const Dashboard: React.FC = () => {
       color: 'text-red-500',
       onClick: () => navigate('/alerts'),
     },
-    {
-      value: `${mlStats.accuracy}%`,
-      label: 'Intelligence IA',
-      sub: (
-        <div className="grid grid-cols-3 gap-1 mt-1">
-          <span className="text-[9px] bg-purple-50 dark:bg-purple-900/20 px-1 rounded text-purple-600 font-bold">R: {mlStats.recall}%</span>
-          <span className="text-[9px] bg-blue-50 dark:bg-blue-900/20 px-1 rounded text-blue-600 font-bold">P: {mlStats.precision}%</span>
-          <span className="text-[9px] bg-indigo-50 dark:bg-indigo-900/20 px-1 rounded text-indigo-600 font-bold">F1: {mlStats.f1Score}%</span>
-        </div>
-      ),
-      icon: Brain,
-      color: 'text-purple-500',
-      onClick: () => { },
-    },
+
     {
       value: `${stats.mttr} min`,
       label: 'MTTR Moyen',
@@ -280,7 +258,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Metrics Row */}
-      <div className="grid gap-6 md:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-3">
         {metricCards.map((card, idx) => (
           <div
             key={idx}
