@@ -60,11 +60,14 @@ class DatasetService {
         let source = 'Wazuh';
         const type = (row.type || 'normal').toLowerCase();
         
-        if (['ddos', 'dos', 'probing'].includes(type)) {
+        if (['ddos', 'dos', 'scanning'].includes(type)) {
             source = 'IBM QRadar';
-        } else if (['malware', 'backdoor', 'ransomware', 'mitm', 'injection'].includes(type)) {
+        } else if (['malware', 'backdoor', 'ransomware', 'mitm', 'injection', 'xss'].includes(type)) {
             source = 'Microsoft Defender';
+        } else if (['password'].includes(type)) {
+            source = 'Wazuh';
         } else {
+            // Fallback pour les types non-reconnus ou 'normal'
             const sourcesList = ['Wazuh', 'IBM QRadar', 'Microsoft Defender'];
             source = sourcesList[Math.floor(Math.random() * sourcesList.length)];
         }
